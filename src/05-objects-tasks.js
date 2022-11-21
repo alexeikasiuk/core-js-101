@@ -6,7 +6,6 @@
  *                                                                                                *
  ************************************************************************************************ */
 
-
 /**
  * Returns the rectangle object with width and height parameters and getArea() method
  *
@@ -20,10 +19,13 @@
  *    console.log(r.height);      // => 20
  *    console.log(r.getArea());   // => 200
  */
-function Rectangle(/* width, height */) {
-  throw new Error('Not implemented');
-}
+function Rectangle(width, height) {
+  // throw new Error('Not implemented');
 
+  this.width = width;
+  this.height = height;
+  this.getArea = () => this.width * this.height;
+}
 
 /**
  * Returns the JSON representation of specified object
@@ -35,10 +37,10 @@ function Rectangle(/* width, height */) {
  *    [1,2,3]   =>  '[1,2,3]'
  *    { width: 10, height : 20 } => '{"height":10,"width":20}'
  */
-function getJSON(/* obj */) {
-  throw new Error('Not implemented');
+function getJSON(obj) {
+  // throw new Error('Not implemented');
+  return JSON.stringify(obj);
 }
-
 
 /**
  * Returns the object of specified type from JSON representation
@@ -51,10 +53,12 @@ function getJSON(/* obj */) {
  *    const r = fromJSON(Circle.prototype, '{"radius":10}');
  *
  */
-function fromJSON(/* proto, json */) {
-  throw new Error('Not implemented');
+function fromJSON(proto, json) {
+  // throw new Error('Not implemented');
+  const obj = JSON.parse(json);
+  Object.setPrototypeOf(obj, proto);
+  return obj;
 }
-
 
 /**
  * Css selectors builder
@@ -111,35 +115,133 @@ function fromJSON(/* proto, json */) {
  */
 
 const cssSelectorBuilder = {
-  element(/* value */) {
-    throw new Error('Not implemented');
+  existErrMsg:
+    'Element, id and pseudo-element should not occur more then one time inside the selector',
+
+  orderErrMsg:
+    'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element',
+
+  isParent: true,
+
+  createSelector(_self) {
+    if (_self.isParent) {
+      const child = {};
+      Object.assign(child, _self);
+      child.isParent = false;
+      child.complex = {};
+      return child;
+    }
+    return _self;
   },
 
-  id(/* value */) {
-    throw new Error('Not implemented');
+  element(value) {
+    const selector = this.createSelector(this);
+    const selectorValues = selector.complex;
+
+    if (
+      // eslint-disable-next-line operator-linebreak
+      selectorValues.id ||
+      // eslint-disable-next-line operator-linebreak
+      selectorValues.class ||
+      // eslint-disable-next-line operator-linebreak
+      selectorValues.attr ||
+      // eslint-disable-next-line operator-linebreak
+      selectorValues.pseudoClass ||
+      selectorValues.pseudoElement
+    ) {
+      throw new Error(selector.orderErrMsg);
+    }
+
+    if (selector.complex.element) throw new Error(selector.existErrMsg);
+
+    selector.complex.element = value;
+    return selector;
   },
 
-  class(/* value */) {
-    throw new Error('Not implemented');
+  id(value) {
+    const selector = this.createSelector(this);
+    const selectorValues = selector.complex;
+
+    if (
+      // eslint-disable-next-line operator-linebreak
+      selectorValues.class ||
+      // eslint-disable-next-line operator-linebreak
+      selectorValues.attr ||
+      // eslint-disable-next-line operator-linebreak
+      selectorValues.pseudoClass ||
+      selectorValues.pseudoElement
+    ) {
+      throw new Error(selector.orderErrMsg);
+    }
+
+    if (selector.complex.id) {
+      throw new Error(selector.existErrMsg);
+    }
+    selector.complex.id = `#${value}`;
+    return selector;
   },
 
-  attr(/* value */) {
-    throw new Error('Not implemented');
+  class(value) {
+    const selector = this.createSelector(this);
+    const selectorValues = selector.complex;
+
+    if (
+      // eslint-disable-next-line operator-linebreak
+      selectorValues.attr ||
+      // eslint-disable-next-line operator-linebreak
+      selectorValues.pseudoClass ||
+      selectorValues.pseudoElement
+    ) {
+      throw new Error(selector.orderErrMsg);
+    }
+
+    const existClasses = selector.complex.class || '';
+    selector.complex.class = `${existClasses}.${value}`;
+    return selector;
   },
 
-  pseudoClass(/* value */) {
-    throw new Error('Not implemented');
+  attr(value) {
+    const selector = this.createSelector(this);
+    const selectorValues = selector.complex;
+
+    if (selectorValues.pseudoClass || selectorValues.pseudoElement) {
+      throw new Error(selector.orderErrMsg);
+    }
+
+    selector.complex.attr = `[${value}]`;
+    return selector;
   },
 
-  pseudoElement(/* value */) {
-    throw new Error('Not implemented');
+  pseudoClass(value) {
+    const selector = this.createSelector(this);
+
+    if (selector.complex.pseudoElement) throw new Error(selector.orderErrMsg);
+
+    const existPseudoClasses = selector.complex.pseudoClass || '';
+    selector.complex.pseudoClass = `${existPseudoClasses}:${value}`;
+    return selector;
   },
 
-  combine(/* selector1, combinator, selector2 */) {
-    throw new Error('Not implemented');
+  pseudoElement(value) {
+    const selector = this.createSelector(this);
+    const isPsElemExist = selector.complex.pseudoElement;
+
+    if (isPsElemExist) throw new Error(selector.existErrMsg);
+
+    selector.complex.pseudoElement = `::${value}`;
+    return selector;
+  },
+
+  combine(selector1, combinator, selector2) {
+    this.selector = `${selector1.stringify()} ${combinator} ${selector2.stringify()}`;
+
+    return this;
+  },
+
+  stringify() {
+    return this.isParent ? this.selector : Object.values(this.complex).join('');
   },
 };
-
 
 module.exports = {
   Rectangle,
